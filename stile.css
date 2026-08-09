@@ -1,0 +1,194 @@
+/* Un'estetica sola, scura. È un'app privata usata in una stanza, non un sito:
+   niente tema chiaro, niente interruttore. L'arancio non decora — compare solo
+   sul bersaglio del giorno e quando si sale di manubrio. */
+
+:root{
+  --fondo:#13110E;
+  --sup:#1B1815;
+  --sup2:#242019;
+  --bordo:#2E2822;
+  --testo:#F0EBE3;
+  --muto:#8B8276;
+  --brace:#F0762E;
+  --suBrace:#17120D;
+  --attrezzo:#635A4F;
+  --tocco:56px;              /* mai un bersaglio più piccolo di così */
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--fondo);
+  color:var(--testo);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--brace);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- le figure degli esercizi ----------
+   Sono disegnate a tratto: senza queste regole l'SVG userebbe il riempimento
+   nero predefinito e diventerebbe una macchia. L'arancio è solo il carico. */
+.fig svg,.figurone svg{width:100%;height:100%;display:block}
+.attrezzo{stroke:var(--attrezzo);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.corpo{stroke:var(--testo);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.corpo circle{fill:var(--testo);stroke:none}
+.lontano{stroke:var(--testo);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.32}
+.peso{stroke:var(--brace);stroke-width:2.2;fill:none;stroke-linecap:round}
+.peso circle{fill:var(--brace);stroke:none}
+.peso circle.ruota{fill:none;stroke:var(--brace);stroke-width:2.2}
+
+/* ---------- impianto ---------- */
+.schermata{display:none;min-height:100dvh;flex-direction:column}
+.schermata.viva{display:flex}
+.contenuto{flex:1;padding:0 20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.fondo-pagina{
+  padding:16px 20px calc(20px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--bordo);background:var(--sup);
+}
+
+.cima{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(12px + env(safe-area-inset-top)) 20px 12px;
+}
+.cima .passo{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muto)}
+.cima button{font-size:14px;color:var(--muto);padding:8px 4px;min-height:44px}
+
+.avanzamento{display:flex;gap:4px;padding:0 20px 14px}
+.avanzamento i{flex:1;height:3px;background:var(--bordo);border-radius:2px}
+.avanzamento i.fatto{background:var(--testo)}
+.avanzamento i.ora{background:var(--brace)}
+
+/* ---------- avvio ---------- */
+.marchio{display:flex;align-items:center;gap:11px;padding:0 0 30px}
+.marchio span{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muto)}
+.occhiello{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muto);margin-bottom:10px}
+.titolone{font-size:52px;font-weight:800;letter-spacing:-.04em;line-height:.96;margin-bottom:22px}
+.elenco-esercizi{list-style:none;margin:0;padding:0;border-top:1px solid var(--bordo)}
+.elenco-esercizi li{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--bordo);font-size:15px;
+}
+.elenco-esercizi .fig{width:40px;height:40px;flex:none;opacity:.85}
+.elenco-esercizi .fascia{margin-left:auto;font-size:11px;color:var(--muto);white-space:nowrap}
+.righe-secondarie{display:flex;gap:10px;padding-top:18px}
+.righe-secondarie button{
+  flex:1;min-height:48px;border:1px solid var(--bordo);border-radius:2px;
+  font-size:14px;color:var(--muto);
+}
+
+.grosso{
+  width:100%;min-height:64px;background:var(--brace);color:var(--suBrace);
+  border-radius:2px;font-size:17px;font-weight:700;letter-spacing:-.01em;
+}
+.grosso.quieto{background:transparent;color:var(--testo);border:1px solid var(--bordo)}
+
+/* ---------- esercizio ---------- */
+.figurone{width:100%;max-width:230px;margin:0 auto 4px;display:block}
+.figurone svg{width:100%;height:auto;display:block}
+.nome-esercizio{font-size:25px;font-weight:800;letter-spacing:-.03em;line-height:1.08;text-wrap:balance}
+.sottotitolo{font-size:13px;color:var(--muto);margin-top:7px;line-height:1.45}
+.messaggio{
+  margin-top:14px;padding:12px 14px;background:var(--sup);border-left:2px solid var(--bordo);
+  font-size:14px;line-height:1.5;color:var(--muto);
+}
+.messaggio.acceso{border-left-color:var(--brace);color:var(--testo)}
+
+.bersaglio{display:flex;align-items:baseline;gap:10px;margin-top:20px}
+.bersaglio .num{font-size:44px;font-weight:800;letter-spacing:-.04em;color:var(--brace);line-height:1}
+.bersaglio .eti{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muto)}
+
+/* ---------- peso ---------- */
+.peso{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.peso .valore{display:flex;align-items:baseline;gap:6px}
+.peso .kg{font-size:42px;font-weight:800;letter-spacing:-.045em;line-height:1}
+.peso .kg.sale{color:var(--brace)}
+.peso .unita{font-size:13px;color:var(--muto)}
+.peso .corpo{font-size:17px;font-weight:600;color:var(--muto)}
+.gradino{
+  width:var(--tocco);height:var(--tocco);flex:none;border:1px solid var(--bordo);
+  border-radius:2px;font-size:24px;line-height:1;color:var(--testo);
+}
+.gradino[disabled]{opacity:.3}
+
+/* ---------- serie ---------- */
+.serie{display:flex;gap:8px;margin-bottom:14px}
+.serie .casella{
+  flex:1;min-height:58px;border:1px solid var(--bordo);border-radius:2px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.serie .casella .n{font-size:24px;font-weight:800;letter-spacing:-.03em}
+.serie .casella .e{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muto)}
+.serie .casella.viva{border-color:var(--brace)}
+.serie .casella.viva .n{color:var(--brace)}
+.serie .casella.vuota .n{color:var(--muto);opacity:.4}
+
+.conta{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.conta .quanti{
+  flex:1;text-align:center;font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:1;
+}
+
+/* ---------- sforzo ---------- */
+.sforzo{display:flex;gap:8px}
+.sforzo button{
+  flex:1;min-height:var(--tocco);border:1px solid var(--bordo);border-radius:2px;font-size:14px;
+}
+.sforzo button.scelto{border-color:var(--brace);color:var(--brace)}
+
+/* ---------- recupero ---------- */
+.recupero{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.recupero svg{width:52px;height:52px;flex:none;transform:rotate(-90deg)}
+.recupero .anello{stroke:var(--bordo);stroke-width:4;fill:none}
+.recupero .quota{stroke:var(--brace);stroke-width:4;fill:none;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.recupero .tempo{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.recupero .avviso{font-size:11.5px;color:var(--muto);line-height:1.4;margin-top:2px}
+.recupero .salta{margin-left:auto;font-size:13px;color:var(--muto);padding:12px;min-height:44px}
+
+/* ---------- storico ---------- */
+.riga-storico{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:12px 0;border-bottom:1px solid var(--bordo);min-height:var(--tocco);
+}
+.riga-storico .fig{width:44px;height:44px;flex:none;opacity:.85}
+.riga-storico .titolo{font-size:15px;font-weight:600}
+.riga-storico .sotto{font-size:11.5px;color:var(--muto);margin-top:3px}
+.riga-storico .freccia{margin-left:auto;color:var(--muto)}
+
+.grafico{width:100%;height:190px;margin:18px 0 6px;display:block}
+.grafico .griglia{stroke:var(--bordo);stroke-width:1}
+.grafico .linea{stroke:var(--brace);stroke-width:2;fill:none;stroke-linejoin:round}
+.grafico .area{fill:var(--brace);opacity:.07}
+.grafico .punto{fill:var(--brace)}
+.grafico text{fill:var(--muto);font-size:9px;font-family:ui-monospace,Menlo,monospace}
+
+.tabella{width:100%;border-collapse:collapse;font-size:13px}
+.tabella th{
+  text-align:left;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muto);font-weight:600;padding:8px 0;border-bottom:1px solid var(--bordo);
+}
+.tabella td{padding:9px 0;border-bottom:1px solid var(--bordo)}
+.tabella td:last-child,.tabella th:last-child{text-align:right}
+
+/* ---------- impostazioni ---------- */
+.campo{padding:16px 0;border-bottom:1px solid var(--bordo)}
+.campo .eti{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muto)}
+.campo .spiega{font-size:12.5px;color:var(--muto);margin-top:6px;line-height:1.5}
+.campo .riga{display:flex;align-items:center;gap:12px;margin-top:10px}
+.campo input{
+  flex:1;min-height:var(--tocco);background:var(--sup);border:1px solid var(--bordo);
+  border-radius:2px;color:var(--testo);font-size:20px;font-weight:700;padding:0 14px;
+  font-family:ui-monospace,Menlo,monospace;
+}
+.campo button.azione{
+  min-height:var(--tocco);padding:0 18px;border:1px solid var(--bordo);border-radius:2px;font-size:14px;
+}
+.vuoto{color:var(--muto);font-size:14px;line-height:1.6;padding:30px 0}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important}
+}

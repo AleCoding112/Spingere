@@ -1,0 +1,16 @@
+{
+  "name": "Spingere",
+  "short_name": "Spingere",
+  "description": "Allenamento in casa: cosa fare oggi, e quando salire di manubrio.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#13110E",
+  "theme_color": "#13110E",
+  "icons": [
+    {"src": "icona.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icona-margine.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spingere</title>
+<meta name="theme-color" content="#13110E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Spingere">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icona.png">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+
+<main id="app"></main>
+
+<script type="module" src="interfaccia.js"></script>
+<script>
+if ('serviceWorker' in navigator)
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+</script>
+</body>
+</html>

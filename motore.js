@@ -89,6 +89,15 @@ export function etichettaPrestazione(esercizio, peso, ripetizioni){
   return ripetizioni + ' ripetizioni';
 }
 
+/* Quanto recuperare, in secondi. Novanta per tutto era comodo da scrivere ma
+   sbagliato: sulle alzate laterali sono un'eternità, dopo uno stacco rumeno a
+   una gamba non bastano. */
+export function recupero(esercizio){
+  if (esercizio.fascia[0] >= 12) return 60;                       /* isolamenti, alte ripetizioni */
+  if (esercizio.carico === 'zavorra' || esercizio.unilaterale) return 120;   /* i pesanti */
+  return 90;
+}
+
 const SFORZI = ['facile', 'giusta', 'limite'];
 export const ETICHETTA_SFORZO = {facile:'Facile', giusta:'Giusta', limite:'Al limite'};
 

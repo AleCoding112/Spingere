@@ -28,13 +28,13 @@ e poi `http://127.0.0.1:8931`.
 
 ```
 node test.mjs        # il motore della progressione
-node verifica.mjs    # integrità di catalogo, allenamenti, figure, offline
+node verifica.mjs    # catalogo, gruppi, composizione, figure, offline
 ```
 
 Devono essere **tutti e due verdi**. `verifica.mjs` controlla anche che nessun file punti a una risorsa
 esterna: è quella la garanzia che offline funzioni davvero.
 
-Quando cambi un file, **alza il numero in `sw.js`** (`const CACHE = 'spingere-1'`). Se non lo fai, il
+Quando cambi un file, **alza il numero in `sw.js`** (`const CACHE = 'spingere-3'`). Se non lo fai, il
 telefono continua a servire la versione vecchia dalla cache e sembrerà che le modifiche non arrivino.
 
 ---
@@ -45,8 +45,10 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 |---|---|
 | `motore.js` | La logica dei carichi. Nessun DOM, nessuna data letta dall'interno: tutto arriva come argomento, quindi è verificabile da solo. |
 | `esercizi.js` | I 48 esercizi e le loro illustrazioni. **Generato** dal catalogo approvato: non modificarlo a mano. |
-| `schede.js` | Le schede: creazione, copertura, alternative per la sostituzione. |
-| `allenamenti.js` | Le tre schede **di partenza**, copiate nell'archivio al primo avvio. Da lì in poi comanda l'archivio. |
+| `gruppi.js` | I gruppi come li pensi tu — petto, dorso, spalle, braccia, gambe, core — e gli **schemi** in cui si aprono. |
+| `comporre.js` | La regola che compone la sessione: per ogni schema, l'esercizio che non fai da più tempo. |
+| `schede.js` | Le schede: combinazioni di gruppi salvate, con la migrazione da quelle vecchie. |
+| `allenamenti.js` | Le vecchie rotazioni A/B/C. Resta solo per migrare chi le aveva. |
 | `archivio.js` | IndexedDB, storico, backup. |
 | `interfaccia.js` | Schermate e tocchi. |
 | `stile.css` | Un'estetica sola, scura. |
@@ -54,21 +56,40 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 
 ## Le decisioni che sembrano strane e non lo sono
 
-**Non c'è nessun calendario.** L'app conosce solo la *prossima* scheda: girano in ordine, e che siano
-passati due giorni o tre settimane non cambia niente. Non compare mai un rimprovero. Se ti alleni a
-giorni variabili, un calendario ti farebbe solo sentire in ritardo.
+**Non c'è nessun calendario.** L'app apre su «Oggi» con una sessione già pronta, e che siano passati due
+giorni o tre settimane non cambia niente. Non compare mai un rimprovero: se ti alleni a giorni variabili,
+un calendario ti farebbe solo sentire in ritardo.
 
-**Le schede sono dati, non codice.** Puoi crearne quante vuoi, cambiarle, riordinarle, eliminarle: la
-rotazione è semplicemente il loro ordine. Puoi anche farne una fuori turno senza spostare il giro, e
-fare un singolo esercizio da solo dal catalogo — quello non fa avanzare la rotazione, perché non è un
-allenamento. Nella prima versione le tre rotazioni erano scritte nel codice, e **27 esercizi su 48 non
-erano raggiungibili in nessun modo**: è il motivo per cui esiste tutta questa parte.
+**Gli esercizi non li sceglie nessuno.** Tu dici quali gruppi vuoi allenare; per ogni schema di quei
+gruppi l'app prende l'esercizio che non fai da più tempo. Nella prima versione le schede erano liste di
+esercizi che avevo scelto io — e sembravano casuali perché lo erano. Ora la varietà non è una decisione
+ma una conseguenza.
+
+**Il dorso vale due esercizi.** Una tirata verticale e una orizzontale sono due lavori diversi, non due
+varianti. Selezionando petto, dorso, spalle, gambe e core escono sei esercizi: due spinte e due tirate in
+pari, gambe e core. Le gambe alternano da sole ginocchio e anca.
+
+**La rotazione è stretta, non larga.** Per ogni schema girano tre esercizi, non tutti quelli disponibili:
+il petto ne ha dieci, e ruotandoli tutti faresti la panca piana una volta ogni dieci sessioni. La doppia
+progressione vuole l'opposto — che un esercizio torni abbastanza spesso da poterci accumulare ripetizioni
+sopra. Gli altri restano raggiungibili: li fai a mano dal catalogo, o li metti fra i **preferiti** e
+prendono il posto di questi. Quelli che non vuoi più vedere li metti **da parte**.
+
+**Le schede sono combinazioni di gruppi**, non liste di esercizi: «Completo», «Solo sopra», «Gambe e
+core». Le vecchie schede a esercizi vengono migrate deducendo i gruppi.
 
 **Tre serie sono il consueto, non un obbligo.** Puoi chiudere prima («Chiudo qui») o farne una in più
 («Ne faccio un'altra»).
 
-**Durante la sessione puoi cambiare esercizio.** Ti propone le alternative dello stesso gruppo che non
-sono già nella scheda. Vale solo per quel giorno: la scheda resta com'è.
+**Puoi cambiare qualunque esercizio**, prima di iniziare dall'anteprima o durante la sessione. Le
+alternative sono dello **stesso schema**: al posto di una tirata verticale un'altra tirata verticale, non
+un rematore.
+
+**Il recupero cambia col tipo:** 60 secondi sugli isolamenti, 120 sui pesanti e sugli unilaterali, 90 per
+il resto. Novanta per tutto era comodo da scrivere ma sbagliato.
+
+**Dal diario si correggono gli errori.** Un numero digitato male falserebbe la progressione di quell'
+esercizio per sempre: dal diario si riapre una sessione, si sistemano i numeri o si cancella tutta.
 
 **Si progredisce a ripetizioni, non a peso.** I manubri hanno cinque gradini in tutto — 3, 8,5, 14, 18,5,
 24 kg. Da 14 a 18,5 è un salto del 32%, da 3 a 8,5 del 183%. «Aggiungi un chilo a settimana» qui è
@@ -105,7 +126,8 @@ se ne va con lui e non si recupera. In Impostazioni c'è **Esporta backup**: sca
 `esercizi.js` è generato. Per aggiungere o togliere un esercizio si parte dal catalogo illustrato e si
 rigenera, altrimenti le due cose divergono.
 
-Le schede si cambiano **dall'app**, non dal codice: `allenamenti.js` è solo la semenza del primo avvio.
-`verifica.mjs` controlla che le schede di partenza coprano spinta, tirata, gambe e core e che nessuna
-punti a un esercizio inesistente; le tue schede invece le fai come vuoi — l'editor ti dice cosa manca
-senza impedirti niente.
+Se aggiungi un esercizio al catalogo, `gruppi.js` deve sapere in che gruppo e in che schema sta:
+`verifica.mjs` fallisce se resta orfano, perché un esercizio senza schema non verrebbe mai proposto da
+nessuna composizione — sarebbe morto.
+
+Le schede si cambiano **dall'app**, non dal codice.

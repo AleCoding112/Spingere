@@ -5,6 +5,9 @@ import {readFileSync, existsSync, readdirSync} from 'node:fs';
 import {ESERCIZI, PER_ID, catena, OSSA, figura} from './esercizi.js';
 import {ALLENAMENTI} from './allenamenti.js';
 import {gradini} from './motore.js';
+import {orfani, COMPLETO, PER_GRUPPO, schemaDi} from './gruppi.js';
+import {componi} from './comporre.js';
+import {schedeDiPartenza} from './schede.js';
 
 let ok = 0; const rotti = [];
 const controlla = (nome, fn) => {
@@ -121,11 +124,10 @@ controlla('il foglio di stile veste le figure a tratto', () => {
   }
 });
 
-controlla('le schede di partenza puntano a esercizi che esistono', () => {
-  for (const a of ALLENAMENTI){
-    const tutti = [...a.nucleo, ...a.opzionali];
-    for (const id of tutti) pretendi(PER_ID[id], a.id + ' cerca «' + id + '», che non c\'è');
-    pretendi(new Set(tutti).size === tutti.length, a.id + ' ripete un esercizio');
+controlla('le schede di partenza sono combinazioni di gruppi valide', () => {
+  for (const s of schedeDiPartenza()){
+    pretendi(s.gruppi.length, s.id + ' non ha nessun gruppo');
+    for (const g of s.gruppi) pretendi(PER_GRUPPO[g], s.id + ' cerca il gruppo «' + g + '»');
   }
 });
 
@@ -133,18 +135,41 @@ controlla('le schede di partenza puntano a esercizi che esistono', () => {
    l'app sapeva aprire solo le tre rotazioni scritte nel codice, e 27
    esercizi su 48 non erano raggiungibili in nessun modo. */
 controlla('ogni esercizio del catalogo è raggiungibile dall\'app', () => {
-  const css = readFileSync('interfaccia.js', 'utf8');
-  pretendi(/vistaCatalogo/.test(css), 'manca la schermata del catalogo');
-  pretendi(/data-solo=/.test(css), 'manca il modo di fare un esercizio da solo');
-  pretendi(/data-scegli=/.test(css), 'manca il modo di metterlo in una scheda');
+  const js = readFileSync('interfaccia.js', 'utf8');
+  pretendi(/vistaEsercizi/.test(js), 'manca la schermata del catalogo');
+  pretendi(/data-solo=/.test(js), 'manca il modo di fare un esercizio da solo');
+  pretendi(/data-preferito=/.test(js), 'manca il modo di portarlo nella rotazione');
 });
 
-controlla('ogni allenamento tocca spinta, tirata, gambe e core', () => {
-  for (const a of ALLENAMENTI){
-    const c = new Set(a.nucleo.map(id => PER_ID[id].categoria));
-    for (const serve of ['spinta', 'tirata', 'gambe', 'core'])
-      pretendi(c.has(serve), a.id + ' non ha niente per «' + serve + '»');
+/* Ogni esercizio deve appartenere a un gruppo e a uno schema, altrimenti
+   non verrebbe mai proposto da nessuna composizione: sarebbe morto. */
+controlla('nessun esercizio resta fuori dai gruppi', () => {
+  const senzaCasa = orfani();
+  pretendi(senzaCasa.length === 0, 'orfani: ' + senzaCasa.map(e => e.id).join(', '));
+  return ESERCIZI.length + ' esercizi tutti collocati';
+});
+
+controlla('il completo esce di sei esercizi, con due spinte e due tirate', () => {
+  const lista = componi(COMPLETO, []).map(id => PER_ID[id]);
+  pretendi(lista.length === 6, 'sono ' + lista.length);
+  const s = lista.map(e => schemaDi(e));
+  for (const serve of ['petto', 'verticale', 'orizzontale', 'spalle', 'core'])
+    pretendi(s.includes(serve), 'manca lo schema «' + serve + '»');
+  pretendi(s.some(x => x === 'ginocchio' || x === 'anca'), 'manca il lavoro di gambe');
+});
+
+controlla('la rotazione fa tornare ogni esercizio abbastanza spesso', () => {
+  let sessioni = [];
+  for (let i = 1; i <= 6; i++){
+    const ids = componi(COMPLETO, sessioni);
+    sessioni.push({data: '2026-08-' + String(i).padStart(2,'0'),
+                   esercizi: ids.map(id => ({id, peso: 10, serie: [10,10,10]}))});
   }
+  const conta = {};
+  for (const s of sessioni) for (const e of s.esercizi) conta[e.id] = (conta[e.id] || 0) + 1;
+  const max = Math.max(...Object.values(conta));
+  pretendi(max >= 2, 'in sei sessioni nessun esercizio torna: la progressione non accumulerebbe');
+  return 'ogni esercizio torna fino a ' + max + ' volte su sei sessioni';
 });
 
 controlla('il carico si può sempre far salire di un gradino', () => {
@@ -176,7 +201,7 @@ controlla('il service worker mette in cache tutti i file che esistono', () => {
   for (const f of file) pretendi(existsSync(f), 'la cache elenca «' + f + '», che non esiste');
 
   const daAvere = ['index.html','stile.css','interfaccia.js','esercizi.js',
-                   'allenamenti.js','schede.js','motore.js','archivio.js','manifest.json'];
+                   'allenamenti.js','schede.js','gruppi.js','comporre.js','motore.js','archivio.js','manifest.json'];
   for (const f of daAvere) pretendi(file.includes(f), f + ' non è nella cache: offline non funzionerebbe');
   return file.length + ' file in cache';
 });

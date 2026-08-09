@@ -42,6 +42,12 @@ export function cancellaSessione(id){
   return transazione('sessioni', 'readwrite', s => s.delete(id));
 }
 
+/* Serve a correggere un numero digitato male. Senza questo un errore di
+   battitura resta per sempre e falsa la progressione di quell'esercizio. */
+export function aggiornaSessione(sessione){
+  return transazione('sessioni', 'readwrite', s => s.put(sessione));
+}
+
 /* Dalla più vecchia alla più recente. */
 export function tutteLeSessioni(){
   return transazione('sessioni', 'readonly', s => s.getAll())

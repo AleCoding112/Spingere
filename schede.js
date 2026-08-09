@@ -1,25 +1,24 @@
 /* Le schede.
 
-   Prima le tre rotazioni erano scritte nel codice e basta: l'app sapeva
-   aprire solo quelle, e 27 dei 48 esercizi del catalogo non erano
-   raggiungibili in nessun modo. Ora le schede sono dati, stanno
-   nell'archivio del telefono e si possono creare, cambiare e riordinare.
+   Non sono più liste di esercizi: sono **combinazioni di gruppi**. Tu dici
+   «oggi completo» oppure «oggi solo sopra», e gli esercizi li compone
+   `comporre.js` scegliendo, per ogni schema, quello che non fai da più tempo.
 
-   `allenamenti.js` resta come **semenza**: sono le tre schede di partenza,
-   copiate nell'archivio al primo avvio. Da lì in poi comanda l'archivio. */
+   È il cambio che toglie di mezzo il difetto vero: prima gli esercizi delle
+   schede li avevo scelti io e sembravano casuali — perché lo erano. */
 
-import {ALLENAMENTI} from './allenamenti.js';
+import {GRUPPI, PER_GRUPPO, COMPLETO, gruppoDi, quantiEsercizi, minutiStimati} from './gruppi.js';
 import {PER_ID} from './esercizi.js';
 import * as archivio from './archivio.js';
 
 export function schedeDiPartenza(){
-  return ALLENAMENTI.map(a => ({
-    id: a.id, nome: a.nome,
-    nucleo: a.nucleo.slice(), opzionali: a.opzionali.slice()
-  }));
+  return [
+    {id:'completo', nome:'Completo',      gruppi: COMPLETO.slice()},
+    {id:'sopra',    nome:'Solo sopra',    gruppi: ['petto','dorso','spalle','braccia']},
+    {id:'gambe',    nome:'Gambe e core',  gruppi: ['gambe','core']}
+  ];
 }
 
-/* Un identificativo che non collide con A, B, C né con i precedenti. */
 export function nuovoId(schede){
   let n = 1, id;
   do { id = 'S' + n++; } while (schede.some(s => s.id === id));
@@ -27,18 +26,26 @@ export function nuovoId(schede){
 }
 
 export function schedaVuota(schede){
-  return {id: nuovoId(schede), nome: 'Nuova scheda', nucleo: [], opzionali: []};
+  return {id: nuovoId(schede), nome: 'Nuova scheda', gruppi: []};
 }
 
-/* Toglie i riferimenti a esercizi che non esistono più: senza questo, una
-   scheda vecchia farebbe esplodere la sessione su un `undefined`. */
-function ripulisci(s){
-  return {
-    id: s.id,
-    nome: s.nome || 'Senza nome',
-    nucleo: (s.nucleo || []).filter(id => PER_ID[id]),
-    opzionali: (s.opzionali || []).filter(id => PER_ID[id])
-  };
+/* Le schede della versione precedente contenevano liste di esercizi
+   (`nucleo` e `opzionali`). Non si buttano: si deducono i gruppi da quegli
+   esercizi, così chi aveva già fatto le sue schede non riparte da zero. */
+export function migra(s){
+  if (Array.isArray(s.gruppi)) {
+    return {id: s.id, nome: s.nome || 'Senza nome',
+            gruppi: s.gruppi.filter(g => PER_GRUPPO[g])};
+  }
+  const vecchi = [...(s.nucleo || []), ...(s.opzionali || [])];
+  const dedotti = [];
+  for (const id of vecchi){
+    const e = PER_ID[id];
+    if (!e) continue;
+    const g = gruppoDi(e);
+    if (!dedotti.includes(g)) dedotti.push(g);
+  }
+  return {id: s.id, nome: s.nome || 'Senza nome', gruppi: dedotti};
 }
 
 export async function leggiSchede(){
@@ -48,41 +55,35 @@ export async function leggiSchede(){
     await archivio.scriviStato('schede', partenza);
     return partenza;
   }
-  return salvate.map(ripulisci);
+  const migrate = salvate.map(migra);
+  /* se una migrazione ha cambiato qualcosa, si riscrive una volta sola */
+  if (JSON.stringify(migrate) !== JSON.stringify(salvate))
+    await archivio.scriviStato('schede', migrate);
+  return migrate;
 }
 
 export function scriviSchede(schede){
-  return archivio.scriviStato('schede', schede.map(ripulisci));
+  return archivio.scriviStato('schede', schede.map(migra));
 }
 
 /* ------------------------------------------------------------------
-   Aiuti per l'editor
+   Aiuti per l'interfaccia
 ------------------------------------------------------------------ */
-
-/* Quali categorie copre il nucleo. Non blocca niente — è una scheda tua e
-   la fai come vuoi — ma dirtelo costa zero. */
-export const CATEGORIE = ['spinta', 'tirata', 'gambe', 'core'];
-
-export function copertura(scheda){
-  const dentro = new Set(scheda.nucleo.map(id => PER_ID[id] && PER_ID[id].categoria));
-  return CATEGORIE.map(c => ({categoria: c, coperta: dentro.has(c)}));
-}
+export const CATEGORIE = ['petto', 'dorso', 'gambe', 'core'];
 
 export function mancanti(scheda){
-  return copertura(scheda).filter(c => !c.coperta).map(c => c.categoria);
+  return CATEGORIE.filter(c => !scheda.gruppi.includes(c));
 }
 
-/* Gli esercizi che possono sostituire questo: stesso gruppo, escluso sé
-   stesso e quelli già presenti nella sessione. */
-export function alternative(esercizioId, giaDentro = []){
-  const e = PER_ID[esercizioId];
-  if (!e) return [];
-  const fuori = new Set([esercizioId, ...giaDentro]);
-  return Object.values(PER_ID)
-    .filter(x => x.gruppo === e.gruppo && !fuori.has(x.id));
+export function descrizione(scheda){
+  if (!scheda.gruppi.length) return 'nessun gruppo scelto';
+  const nomi = GRUPPI.filter(g => scheda.gruppi.includes(g.id)).map(g => g.nome.toLowerCase());
+  return nomi.join(', ');
 }
 
-export function durataStimata(scheda){
-  const n = scheda.nucleo.length, o = scheda.opzionali.length;
-  return {corta: Math.round(n * 10), lunga: Math.round((n + o) * 10)};
+export function riassunto(scheda){
+  return {
+    esercizi: quantiEsercizi(scheda.gruppi),
+    minuti: minutiStimati(scheda.gruppi)
+  };
 }

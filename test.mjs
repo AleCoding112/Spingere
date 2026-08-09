@@ -5,11 +5,8 @@ import {prescrizione, prossimoGradino, gradinoPrecedente, caricoTotale,
         indiceProgresso, record, saliteDiFila, prossimoAllenamento, giorniTra, recupero,
         GRADINI, GRADINI_ZAVORRA} from './motore.js';
 import {etichettaPrestazione} from './motore.js';
-import {schedeDiPartenza, nuovoId, migra} from './schede.js';
-import {COMPLETO, quantiEsercizi, schemaDi} from './gruppi.js';
-import {componi, gruppiRimasti, alternativeSchema, ROTAZIONE} from './comporre.js';
-import {PER_ID} from './esercizi.js';
-import {ALLENAMENTI} from './allenamenti.js';
+import {schedeDiPartenza, nuovoId, migra, alternative, minutiScheda, sezioni} from './schede.js';
+import {PER_ID, ESERCIZI} from './esercizi.js';
 
 let passati = 0, falliti = [];
 function prova(nome, fn){
@@ -198,20 +195,21 @@ prova('gli esercizi a un lato si registrano una volta sola', () => {
   uguale(p.serie, 3, 'tre serie, non sei:');
 });
 
-/* ---------- rotazione ---------- */
-prova('la rotazione gira e non guarda il calendario', () => {
-  uguale(prossimoAllenamento(ALLENAMENTI, 'A').id, 'B');
-  uguale(prossimoAllenamento(ALLENAMENTI, 'C').id, 'A');
-  uguale(prossimoAllenamento(ALLENAMENTI, null).id, 'A', 'la prima volta si parte da A:');
+/* ---------- rotazione fra le schede ---------- */
+const finte = [{id:'A', nome:'A', esercizi:['panca-piana-manubri']},
+               {id:'B', nome:'B', esercizi:['trazioni-presa-prona']},
+               {id:'C', nome:'C', esercizi:['affondi-statici']}];
+prova('le schede girano in ordine e non guardano il calendario', () => {
+  uguale(prossimoAllenamento(finte, 'A').id, 'B');
+  uguale(prossimoAllenamento(finte, 'C').id, 'A');
+  uguale(prossimoAllenamento(finte, null).id, 'A', 'la prima volta si parte dalla prima:');
 });
 prova('se cancelli la scheda che era di turno, si riparte dalla prima', () => {
-  uguale(prossimoAllenamento(ALLENAMENTI, 'sparita').id, 'A');
+  uguale(prossimoAllenamento(finte, 'sparita').id, 'A');
   uguale(prossimoAllenamento([], 'A'), null, 'senza schede non c\'è un prossimo:');
 });
 
-/* ---------- come si scrive un carico ----------
-   Il difetto vero: sulle flessioni compariva «Record: 75 kg × 18», perché il
-   peso corporeo veniva scritto come se fosse un manubrio. */
+/* ---------- come si scrive un carico ---------- */
 prova('a corpo libero si scrivono le ripetizioni, non i chili', () => {
   uguale(etichettaPrestazione(flex, null, 18), '18 ripetizioni');
   uguale(etichettaPrestazione(trazio, 0, 8), '8 ripetizioni', 'zavorra a zero è corpo libero:');
@@ -223,75 +221,48 @@ prova('con i manubri si scrive il manubrio', () => {
   uguale(etichettaPrestazione(panca, 18.5, 8), '18,5 kg × 8', 'con la virgola, non il punto:');
 });
 
-/* ---------- schede: ora sono combinazioni di gruppi ---------- */
-prova('le schede di partenza sono gruppi, non liste di esercizi', () => {
-  const s = schedeDiPartenza();
-  vero(s.every(x => Array.isArray(x.gruppi)), 'ognuna deve avere i gruppi');
-  uguale(s[0].gruppi, COMPLETO, 'la prima è il completo:');
+/* ---------- schede: liste di esercizi scelti da lui ---------- */
+prova('si parte senza nessuna scheda: le fa lui', () => {
+  uguale(schedeDiPartenza(), []);
 });
 prova('un identificativo nuovo non calpesta quelli che ci sono', () => {
-  const s = schedeDiPartenza();
-  uguale(s.some(x => x.id === nuovoId(s)), false);
-  uguale(nuovoId([...s, {id:'S1'}]), 'S2', 'salta quelli già presi:');
+  uguale(nuovoId([{id:'S1'},{id:'S2'}]), 'S3');
 });
-prova('le vecchie schede a liste di esercizi si migrano in gruppi', () => {
+prova('le vecchie schede a nucleo e opzionali si recuperano', () => {
   const vecchia = {id:'A', nome:'Allenamento A',
-    nucleo:['panca-piana-manubri','trazioni-presa-prona','affondi-statici'],
-    opzionali:['curl-martello']};
-  uguale(migra(vecchia).gruppi, ['petto','dorso','gambe','braccia']);
+    nucleo:['panca-piana-manubri','trazioni-presa-prona'], opzionali:['curl-martello']};
+  uguale(migra(vecchia).esercizi,
+    ['panca-piana-manubri','trazioni-presa-prona','curl-martello']);
 });
-prova('migrare una scheda già a gruppi non la tocca', () => {
-  uguale(migra({id:'x', nome:'X', gruppi:['petto','core']}).gruppi, ['petto','core']);
+prova('le schede a soli gruppi non si possono recuperare, e si buttano', () => {
+  uguale(migra({id:'x', nome:'Completo', gruppi:['petto','dorso']}), null,
+    'non contengono nessun esercizio:');
+});
+prova('gli esercizi spariti dal catalogo vengono tolti dalle schede', () => {
+  uguale(migra({id:'x', nome:'X', esercizi:['panca-piana-manubri','inventato']}).esercizi,
+    ['panca-piana-manubri']);
+});
+prova('una scheda rimasta senza esercizi non si tiene', () => {
+  uguale(migra({id:'x', nome:'X', esercizi:['inventato']}), null);
 });
 
-/* ---------- la composizione della sessione ---------- */
-prova('il completo dà sei esercizi', () => {
-  uguale(componi(COMPLETO, []).length, 6);
-  uguale(quantiEsercizi(COMPLETO), 6, 'e il conto lo sa in anticipo:');
+/* ---------- conti e alternative ---------- */
+prova('gli esercizi a un lato contano il doppio del tempo', () => {
+  vero(bulgaro.unilaterale);
+  uguale(minutiScheda([bulgaro.id]), 12);
+  uguale(minutiScheda([panca.id]), 7);
+  uguale(minutiScheda([panca.id, bulgaro.id]), 19);
 });
-prova('il dorso ne porta sempre due: verticale e orizzontale', () => {
-  const s = componi(['dorso'], []).map(id => schemaDi(PER_ID[id]));
-  uguale(s.sort(), ['orizzontale','verticale']);
+prova('le alternative sono della stessa sezione, e non ripetono quelle in scheda', () => {
+  const alt = alternative('panca-piana-manubri', ['croci-panca-piana']);
+  vero(alt.length > 0, 'qualcosa deve esserci');
+  vero(alt.every(x => x.gruppo === panca.gruppo), 'tutte della stessa sezione');
+  vero(!alt.some(x => x.id === 'panca-piana-manubri'), 'non propone sé stesso');
+  vero(!alt.some(x => x.id === 'croci-panca-piana'), 'non propone quello che è già dentro');
 });
-prova('sceglie l\'esercizio che non fai da più tempo', () => {
-  const primo = componi(['petto'], [])[0];
-  const dopo = componi(['petto'], [{data:'2026-08-01', esercizi:[{id:primo, serie:[10]}]}])[0];
-  vero(dopo !== primo, 'il secondo giro non ripete il primo');
-});
-prova('le gambe alternano ginocchio e anca', () => {
-  const a = componi(['gambe'], [])[0];
-  const s1 = {data:'2026-08-01', esercizi:[{id:a, serie:[10]}]};
-  const b = componi(['gambe'], [s1])[0];
-  vero(schemaDi(PER_ID[a]) !== schemaDi(PER_ID[b]),
-    'due sessioni di fila non possono essere lo stesso schema');
-});
-prova('la rotazione è stretta: un esercizio torna, non sparisce per dieci sessioni', () => {
-  let sess = [];
-  for (let i = 1; i <= 4; i++){
-    const ids = componi(['petto'], sess);
-    sess.push({data:'2026-08-0' + i, esercizi: ids.map(id => ({id, serie:[10]}))});
-  }
-  const usati = sess.flatMap(s => s.esercizi.map(e => e.id));
-  uguale(new Set(usati).size, ROTAZIONE, 'girano ' + ROTAZIONE + ' esercizi, non tutto il catalogo:');
-});
-prova('un esercizio messo da parte non viene più proposto', () => {
-  const normale = componi(['petto'], [])[0];
-  const dopo = componi(['petto'], [], {dascartare:[normale]})[0];
-  vero(dopo !== normale);
-});
-prova('un preferito prende il posto degli altri nel suo schema', () => {
-  const scelto = 'flessioni-diamante';   /* tricipiti, fuori dai primi tre */
-  uguale(componi(['braccia'], [], {preferiti:[scelto]}).includes(scelto), true);
-});
-prova('le alternative sono dello stesso schema, non solo dello stesso gruppo', () => {
-  const alt = alternativeSchema('trazioni-presa-prona', []);
-  vero(alt.length > 0);
-  vero(alt.every(x => schemaDi(x) === 'verticale'), 'una tirata verticale si cambia con un\'altra');
-  vero(!alt.some(x => x.id === 'trazioni-presa-prona'), 'non propone sé stesso');
-});
-prova('i gruppi rimasti sono quelli non ancora scelti', () => {
-  vero(!gruppiRimasti(COMPLETO).includes('petto'));
-  vero(gruppiRimasti(COMPLETO).includes('braccia'));
+prova('le sezioni del catalogo coprono tutti gli esercizi', () => {
+  const dentro = sezioni().reduce((n, s) => n + s.lista.length, 0);
+  uguale(dentro, ESERCIZI.length);
 });
 
 /* ---------- recupero ---------- */

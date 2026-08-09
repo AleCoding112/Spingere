@@ -159,16 +159,22 @@ button.carta{display:block;width:100%}
 .barra-nav button.attiva{color:var(--brace)}
 .barra-nav svg{width:23px;height:23px;display:block}
 
-/* ================= gruppi da scegliere ================= */
-.griglia-gruppi{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
-.gruppo-scelta{
-  background:var(--sup);border:1.5px solid transparent;border-radius:var(--raggio-p);
-  padding:var(--s3) var(--s4);min-height:70px;display:flex;flex-direction:column;justify-content:center;
+/* ================= catalogo a sezioni =================
+   Quarantotto esercizi di fila erano dodici schermate di scorrimento. */
+.sezione-testa{
+  display:flex;align-items:center;gap:var(--s3);width:100%;
+  background:var(--sup);border-radius:var(--raggio-p);
+  padding:var(--s3) var(--s4);min-height:52px;margin-bottom:var(--s2);
 }
-.gruppo-scelta .g{font-size:16px;font-weight:600}
-.gruppo-scelta .q{font-size:11.5px;color:var(--muto);margin-top:2px}
-.gruppo-scelta[aria-pressed="true"]{border-color:var(--brace);background:var(--sup2)}
-.gruppo-scelta[aria-pressed="true"] .g{color:var(--brace)}
+.sezione-testa .nome-sez{flex:1;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.sezione-testa .conta-sez{font-size:12px;color:var(--muto);flex:none}
+.sezione-testa .freccia-sez{
+  flex:none;color:var(--muto);font-size:17px;line-height:1;width:12px;text-align:center;
+  transition:transform .15s ease;
+}
+.sezione-testa.aperta{background:var(--sup2)}
+.sezione-testa.aperta .freccia-sez{transform:rotate(90deg);color:var(--brace)}
+.sezione-corpo{padding:0 var(--s1) var(--s4)}
 
 /* ================= sessione ================= */
 .cima{

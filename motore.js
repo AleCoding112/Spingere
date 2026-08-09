@@ -98,7 +98,6 @@ export function recupero(esercizio){
   return 90;
 }
 
-const SFORZI = ['facile', 'giusta', 'limite'];
 export const ETICHETTA_SFORZO = {facile:'Facile', giusta:'Giusta', limite:'Al limite'};
 
 function fasciaChiusa(esercizio, serie){
@@ -209,4 +208,3 @@ export function prossimoAllenamento(allenamenti, ultimoId){
   return allenamenti[(i + 1) % allenamenti.length];
 }
 
-export const SFORZI_VALIDI = SFORZI;

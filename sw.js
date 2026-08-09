@@ -5,7 +5,7 @@
    Cambia CACHE quando modifichi un file, altrimenti il telefono continua a
    servire la versione vecchia. */
 
-const CACHE = 'spingere-4';
+const CACHE = 'spingere-5';
 
 const ROBA = [
   './',
@@ -13,10 +13,7 @@ const ROBA = [
   'stile.css',
   'interfaccia.js',
   'esercizi.js',
-  'allenamenti.js',
   'schede.js',
-  'gruppi.js',
-  'comporre.js',
   'motore.js',
   'archivio.js',
   'manifest.json',

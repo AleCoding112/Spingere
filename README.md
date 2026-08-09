@@ -34,7 +34,7 @@ node verifica.mjs    # catalogo, gruppi, composizione, figure, offline
 Devono essere **tutti e due verdi**. `verifica.mjs` controlla anche che nessun file punti a una risorsa
 esterna: è quella la garanzia che offline funzioni davvero.
 
-Quando cambi un file, **alza il numero in `sw.js`** (`const CACHE = 'spingere-3'`). Se non lo fai, il
+Quando cambi un file, **alza il numero in `sw.js`** (`const CACHE = 'spingere-5'`). Se non lo fai, il
 telefono continua a servire la versione vecchia dalla cache e sembrerà che le modifiche non arrivino.
 
 ---
@@ -45,10 +45,7 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 |---|---|
 | `motore.js` | La logica dei carichi. Nessun DOM, nessuna data letta dall'interno: tutto arriva come argomento, quindi è verificabile da solo. |
 | `esercizi.js` | I 48 esercizi e le loro illustrazioni. **Generato** dal catalogo approvato: non modificarlo a mano. |
-| `gruppi.js` | I gruppi come li pensi tu — petto, dorso, spalle, braccia, gambe, core — e gli **schemi** in cui si aprono. |
-| `comporre.js` | La regola che compone la sessione: per ogni schema, l'esercizio che non fai da più tempo. |
-| `schede.js` | Le schede: combinazioni di gruppi salvate, con la migrazione da quelle vecchie. |
-| `allenamenti.js` | Le vecchie rotazioni A/B/C. Resta solo per migrare chi le aveva. |
+| `schede.js` | Le schede: liste di esercizi, i conti sui tempi, le alternative, le sezioni del catalogo. |
 | `archivio.js` | IndexedDB, storico, backup. |
 | `interfaccia.js` | Schermate e tocchi. |
 | `stile.css` | Un'estetica sola, scura. |
@@ -60,30 +57,33 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 giorni o tre settimane non cambia niente. Non compare mai un rimprovero: se ti alleni a giorni variabili,
 un calendario ti farebbe solo sentire in ritardo.
 
-**Gli esercizi non li sceglie nessuno.** Tu dici quali gruppi vuoi allenare; per ogni schema di quei
-gruppi l'app prende l'esercizio che non fai da più tempo. Nella prima versione le schede erano liste di
-esercizi che avevo scelto io — e sembravano casuali perché lo erano. Ora la varietà non è una decisione
-ma una conseguenza.
+**Una scheda è una lista di esercizi tuoi.** Li scegli dal catalogo, li ordini come vuoi, e quando fai
+quella scheda escono quelli. Si parte **senza nessuna scheda**: la prima la fai tu.
 
-**Il dorso vale due esercizi.** Una tirata verticale e una orizzontale sono due lavori diversi, non due
-varianti. Selezionando petto, dorso, spalle, gambe e core escono sei esercizi: due spinte e due tirate in
-pari, gambe e core. Le gambe alternano da sole ginocchio e anca.
+Ci sono passate tre forme prima di arrivare qui. Erano scritte nel codice (e 27 esercizi su 48 non erano
+raggiungibili in nessun modo). Poi sono diventate combinazioni di gruppi, con gli esercizi scelti da una
+regola — che ruotava bene ma toglieva il controllo. Ora sono la cosa più semplice, e la scelta è tutta
+tua. Le schede vecchie a `nucleo`/`opzionali` vengono recuperate; quelle a soli gruppi no, perché non
+contengono nessun esercizio.
 
-**La rotazione è stretta, non larga.** Per ogni schema girano tre esercizi, non tutti quelli disponibili:
-il petto ne ha dieci, e ruotandoli tutti faresti la panca piana una volta ogni dieci sessioni. La doppia
-progressione vuole l'opposto — che un esercizio torni abbastanza spesso da poterci accumulare ripetizioni
-sopra. Gli altri restano raggiungibili: li fai a mano dal catalogo, o li metti fra i **preferiti** e
-prendono il posto di questi. Quelli che non vuoi più vedere li metti **da parte**.
-
-**Le schede sono combinazioni di gruppi**, non liste di esercizi: «Completo», «Solo sopra», «Gambe e
-core». Le vecchie schede a esercizi vengono migrate deducendo i gruppi.
+**Le schede girano in ordine.** Finita una, «Oggi» propone la successiva. Nessun calendario: che siano
+passati due giorni o tre settimane non cambia niente.
 
 **Tre serie sono il consueto, non un obbligo.** Puoi chiudere prima («Chiudo qui») o farne una in più
 («Ne faccio un'altra»).
 
-**Puoi cambiare qualunque esercizio**, prima di iniziare dall'anteprima o durante la sessione. Le
-alternative sono dello **stesso schema**: al posto di una tirata verticale un'altra tirata verticale, non
-un rematore.
+**Puoi cambiare qualunque esercizio**, prima di iniziare dall'anteprima o durante la sessione: le
+alternative sono della stessa sezione del catalogo. Vale solo per quel giorno, la scheda resta com'è. E a
+scheda finita puoi aggiungerne uno al volo.
+
+**Il catalogo si apre a sezioni.** Quarantotto voci di fila erano dodici schermate di scorrimento: ora le
+nove sezioni partono chiuse, e cercando si aprono da sole.
+
+**Il diario si guarda prima di correggerlo.** Toccando una sessione si vede cosa hai fatto; da lì, se
+serve, si passa alla correzione dei numeri.
+
+**Il recupero si legge dall'orologio, non contando all'indietro.** iOS congela i timer quando l'app va in
+secondo piano, e al ritorno il conto restava fermo dov'era.
 
 **Il recupero cambia col tipo:** 60 secondi sugli isolamenti, 120 sui pesanti e sugli unilaterali, 90 per
 il resto. Novanta per tutto era comodo da scrivere ma sbagliato.
@@ -156,8 +156,7 @@ se ne va con lui e non si recupera. In Impostazioni c'è **Esporta backup**: sca
 `esercizi.js` è generato. Per aggiungere o togliere un esercizio si parte dal catalogo illustrato e si
 rigenera, altrimenti le due cose divergono.
 
-Se aggiungi un esercizio al catalogo, `gruppi.js` deve sapere in che gruppo e in che schema sta:
-`verifica.mjs` fallisce se resta orfano, perché un esercizio senza schema non verrebbe mai proposto da
-nessuna composizione — sarebbe morto.
+Ogni esercizio deve stare in una sezione del catalogo: `verifica.mjs` controlla che le nove sezioni li
+coprano tutti, perché un esercizio fuori da ogni sezione non sarebbe raggiungibile da nessuna schermata.
 
-Le schede si cambiano **dall'app**, non dal codice.
+Le schede si fanno **dall'app**, non dal codice.

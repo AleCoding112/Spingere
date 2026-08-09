@@ -4,6 +4,8 @@
 import {prescrizione, prossimoGradino, gradinoPrecedente, caricoTotale,
         indiceProgresso, record, saliteDiFila, prossimoAllenamento, giorniTra,
         GRADINI, GRADINI_ZAVORRA} from './motore.js';
+import {etichettaPrestazione} from './motore.js';
+import {schedeDiPartenza, nuovoId, mancanti, alternative} from './schede.js';
 import {PER_ID} from './esercizi.js';
 import {ALLENAMENTI} from './allenamenti.js';
 
@@ -199,6 +201,48 @@ prova('la rotazione gira e non guarda il calendario', () => {
   uguale(prossimoAllenamento(ALLENAMENTI, 'A').id, 'B');
   uguale(prossimoAllenamento(ALLENAMENTI, 'C').id, 'A');
   uguale(prossimoAllenamento(ALLENAMENTI, null).id, 'A', 'la prima volta si parte da A:');
+});
+prova('se cancelli la scheda che era di turno, si riparte dalla prima', () => {
+  uguale(prossimoAllenamento(ALLENAMENTI, 'sparita').id, 'A');
+  uguale(prossimoAllenamento([], 'A'), null, 'senza schede non c\'è un prossimo:');
+});
+
+/* ---------- come si scrive un carico ----------
+   Il difetto vero: sulle flessioni compariva «Record: 75 kg × 18», perché il
+   peso corporeo veniva scritto come se fosse un manubrio. */
+prova('a corpo libero si scrivono le ripetizioni, non i chili', () => {
+  uguale(etichettaPrestazione(flex, null, 18), '18 ripetizioni');
+  uguale(etichettaPrestazione(trazio, 0, 8), '8 ripetizioni', 'zavorra a zero è corpo libero:');
+});
+prova('con la zavorra si scrive quanto hai aggiunto', () => {
+  uguale(etichettaPrestazione(trazio, 3, 8), '+3 kg × 8');
+});
+prova('con i manubri si scrive il manubrio', () => {
+  uguale(etichettaPrestazione(panca, 18.5, 8), '18,5 kg × 8', 'con la virgola, non il punto:');
+});
+
+/* ---------- schede ---------- */
+prova('le schede di partenza sono una copia, non le originali', () => {
+  const s = schedeDiPartenza();
+  s[0].nucleo.push('curl-martello');
+  uguale(ALLENAMENTI[0].nucleo.includes('curl-martello'), false, 'la semenza non si sporca:');
+});
+prova('un identificativo nuovo non calpesta quelli che ci sono', () => {
+  const s = schedeDiPartenza();
+  const id = nuovoId(s);
+  uguale(s.some(x => x.id === id), false);
+  uguale(nuovoId([...s, {id:'S1'}]), 'S2', 'salta quelli già presi:');
+});
+prova('la copertura dice cosa manca al nucleo', () => {
+  uguale(mancanti({nucleo: [], opzionali: []}), ['spinta','tirata','gambe','core']);
+  uguale(mancanti(schedeDiPartenza()[0]), [], 'la scheda A copre tutto:');
+});
+prova('le alternative sono dello stesso gruppo e non ripetono quello che hai già', () => {
+  const alt = alternative('panca-piana-manubri', ['croci-panca-piana']);
+  vero(alt.length > 0, 'qualcosa deve esserci');
+  vero(alt.every(x => x.gruppo === panca.gruppo), 'tutte dello stesso gruppo');
+  vero(!alt.some(x => x.id === 'panca-piana-manubri'), 'non propone sé stesso');
+  vero(!alt.some(x => x.id === 'croci-panca-piana'), 'non propone quello che è già in scheda');
 });
 
 /* ---------- esito ---------- */

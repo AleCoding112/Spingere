@@ -98,6 +98,16 @@ controlla('ogni figura si disegna senza buchi e resta nel riquadro', () => {
   }
 });
 
+/* Gli attributi HTML sono minuscoli sempre: `data-conCui` nel markup diventa
+   `data-concui` nel DOM, quindi `dataset.conCui` è `undefined` e il pulsante
+   non fa niente — mentre il selettore continua a trovarlo, così sembra tutto
+   a posto. È già successo una volta, sulla sostituzione degli esercizi. */
+controlla('nessun attributo data- con una maiuscola', () => {
+  const js = readFileSync('interfaccia.js', 'utf8');
+  const storti = [...js.matchAll(/data-[a-z]*[A-Z][a-zA-Z-]*/g)].map(m => m[0]);
+  pretendi(storti.length === 0, 'trovati: ' + [...new Set(storti)].join(', '));
+});
+
 /* Le figure sono a tratto: se il foglio di stile non dichiara stroke e
    fill:none, l'SVG usa il riempimento nero e diventa una macchia. */
 controlla('il foglio di stile veste le figure a tratto', () => {
@@ -111,12 +121,22 @@ controlla('il foglio di stile veste le figure a tratto', () => {
   }
 });
 
-controlla('gli allenamenti puntano a esercizi che esistono', () => {
+controlla('le schede di partenza puntano a esercizi che esistono', () => {
   for (const a of ALLENAMENTI){
     const tutti = [...a.nucleo, ...a.opzionali];
     for (const id of tutti) pretendi(PER_ID[id], a.id + ' cerca «' + id + '», che non c\'è');
     pretendi(new Set(tutti).size === tutti.length, a.id + ' ripete un esercizio');
   }
+});
+
+/* Il difetto che ha reso necessario tutto il lavoro sulle schede: prima
+   l'app sapeva aprire solo le tre rotazioni scritte nel codice, e 27
+   esercizi su 48 non erano raggiungibili in nessun modo. */
+controlla('ogni esercizio del catalogo è raggiungibile dall\'app', () => {
+  const css = readFileSync('interfaccia.js', 'utf8');
+  pretendi(/vistaCatalogo/.test(css), 'manca la schermata del catalogo');
+  pretendi(/data-solo=/.test(css), 'manca il modo di fare un esercizio da solo');
+  pretendi(/data-scegli=/.test(css), 'manca il modo di metterlo in una scheda');
 });
 
 controlla('ogni allenamento tocca spinta, tirata, gambe e core', () => {
@@ -156,7 +176,7 @@ controlla('il service worker mette in cache tutti i file che esistono', () => {
   for (const f of file) pretendi(existsSync(f), 'la cache elenca «' + f + '», che non esiste');
 
   const daAvere = ['index.html','stile.css','interfaccia.js','esercizi.js',
-                   'allenamenti.js','motore.js','archivio.js','manifest.json'];
+                   'allenamenti.js','schede.js','motore.js','archivio.js','manifest.json'];
   for (const f of daAvere) pretendi(file.includes(f), f + ' non è nella cache: offline non funzionerebbe');
   return file.length + ' file in cache';
 });

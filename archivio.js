@@ -78,10 +78,11 @@ export async function esporta(){
   const sessioni = await tutteLeSessioni();
   const pesoCorporeo = await leggiStato('pesoCorporeo', null);
   const ultimoAllenamento = await leggiStato('ultimoAllenamento', null);
+  const schede = await leggiStato('schede', null);
   return JSON.stringify({
     app: 'Spingere', versione: VERSIONE,
     esportato: new Date().toISOString(),
-    pesoCorporeo, ultimoAllenamento, sessioni
+    pesoCorporeo, ultimoAllenamento, schede, sessioni
   }, null, 1);
 }
 
@@ -95,8 +96,10 @@ export async function importa(testo){
     const s = t.objectStore('sessioni');
     s.clear();
     for (const sess of dati.sessioni){ const {id, ...resto} = sess; s.add(resto); }
-    if (dati.pesoCorporeo != null) t.objectStore('stato').put({chiave:'pesoCorporeo', valore:dati.pesoCorporeo});
-    if (dati.ultimoAllenamento) t.objectStore('stato').put({chiave:'ultimoAllenamento', valore:dati.ultimoAllenamento});
+    const stato = t.objectStore('stato');
+    if (dati.pesoCorporeo != null) stato.put({chiave:'pesoCorporeo', valore:dati.pesoCorporeo});
+    if (dati.ultimoAllenamento) stato.put({chiave:'ultimoAllenamento', valore:dati.ultimoAllenamento});
+    if (Array.isArray(dati.schede) && dati.schede.length) stato.put({chiave:'schede', valore:dati.schede});
     t.oncomplete = ok; t.onerror = () => no(t.error);
   });
   return dati.sessioni.length;

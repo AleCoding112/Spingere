@@ -87,6 +87,74 @@ h1,h2,h3,p{margin:0}
   border-radius:2px;font-size:17px;font-weight:700;letter-spacing:-.01em;
 }
 .grosso.quieto{background:transparent;color:var(--testo);border:1px solid var(--bordo)}
+.sotto-grosso{
+  width:100%;min-height:46px;margin-top:8px;font-size:13px;color:var(--muto);
+}
+
+/* ---------- le strade dalla schermata di casa ---------- */
+.strade{display:flex;flex-direction:column;margin-top:26px;border-top:1px solid var(--bordo)}
+.strada{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:15px 2px;border-bottom:1px solid var(--bordo);min-height:var(--tocco);
+}
+.strada .titolo{display:block;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.strada .sotto{display:block;font-size:12px;color:var(--muto);margin-top:3px}
+.strada .freccia{margin-left:auto;color:var(--muto);font-size:20px}
+
+/* ---------- schede ---------- */
+.scheda-riga{display:flex;align-items:stretch;gap:8px;border-bottom:1px solid var(--bordo)}
+.scheda-apri{flex:1;text-align:left;padding:14px 2px;min-height:var(--tocco)}
+.scheda-apri .titolo{display:block;font-size:16px;font-weight:600}
+.scheda-apri .sotto{display:block;font-size:11.5px;color:var(--muto);margin-top:4px}
+.turno{
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--brace);
+  border:1px solid var(--brace);border-radius:2px;padding:1px 4px;vertical-align:middle;
+}
+.scheda-modifica{
+  flex:none;align-self:center;font-size:13px;color:var(--muto);
+  padding:0 10px;min-height:44px;border:1px solid var(--bordo);border-radius:2px;
+}
+
+/* ---------- editor ---------- */
+.voce{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bordo)}
+.voce .fig{width:36px;height:36px;flex:none;opacity:.85}
+.nome-voce{flex:1;font-size:14px;line-height:1.25;min-width:0}
+.mini{
+  width:40px;height:40px;flex:none;border:1px solid var(--bordo);border-radius:2px;
+  font-size:15px;color:var(--muto);
+}
+.mini[disabled]{opacity:.25}
+.mini.via{color:var(--brace)}
+.riga-avvolge{flex-wrap:wrap}
+
+/* ---------- ricerca e scelta ---------- */
+.cerca{padding:0 20px 12px}
+.cerca input{
+  width:100%;min-height:48px;background:var(--sup);border:1px solid var(--bordo);
+  border-radius:2px;color:var(--testo);font-size:15px;padding:0 14px;
+}
+.gruppo-titolo{
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muto);
+  padding:18px 0 8px;border-bottom:1.5px solid var(--testo);margin-bottom:2px;
+}
+.riga-scelta{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:10px 2px;border-bottom:1px solid var(--bordo);min-height:var(--tocco);
+}
+.riga-scelta .fig{width:44px;height:44px;flex:none;opacity:.85}
+.riga-scelta .titolo{display:block;font-size:15px;font-weight:600;line-height:1.25}
+.riga-scelta .sotto{display:block;font-size:11px;color:var(--muto);margin-top:3px}
+.riga-scelta .segno{
+  margin-left:auto;flex:none;width:30px;height:30px;border:1px solid var(--bordo);
+  border-radius:2px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--muto);
+}
+.riga-scelta[aria-pressed="true"] .segno{border-color:var(--brace);color:var(--brace)}
+.riga-scelta[aria-pressed="true"] .titolo{color:var(--brace)}
+
+/* ---------- comandi minori dentro la sessione ---------- */
+.minori{display:flex;gap:16px;margin-top:18px}
+.minori button{font-size:13px;color:var(--muto);min-height:44px;text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- esercizio ---------- */
 .figurone{width:100%;max-width:230px;margin:0 auto 4px;display:block}
@@ -184,6 +252,8 @@ h1,h2,h3,p{margin:0}
   border-radius:2px;color:var(--testo);font-size:20px;font-weight:700;padding:0 14px;
   font-family:ui-monospace,Menlo,monospace;
 }
+/* il monospaziato serve alle cifre, non ai nomi */
+.campo input[type="text"]{font-family:inherit;font-size:18px;letter-spacing:-.01em}
 .campo button.azione{
   min-height:var(--tocco);padding:0 18px;border:1px solid var(--bordo);border-radius:2px;font-size:14px;
 }

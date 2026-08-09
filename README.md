@@ -45,7 +45,8 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 |---|---|
 | `motore.js` | La logica dei carichi. Nessun DOM, nessuna data letta dall'interno: tutto arriva come argomento, quindi è verificabile da solo. |
 | `esercizi.js` | I 48 esercizi e le loro illustrazioni. **Generato** dal catalogo approvato: non modificarlo a mano. |
-| `allenamenti.js` | Le rotazioni A, B, C. |
+| `schede.js` | Le schede: creazione, copertura, alternative per la sostituzione. |
+| `allenamenti.js` | Le tre schede **di partenza**, copiate nell'archivio al primo avvio. Da lì in poi comanda l'archivio. |
 | `archivio.js` | IndexedDB, storico, backup. |
 | `interfaccia.js` | Schermate e tocchi. |
 | `stile.css` | Un'estetica sola, scura. |
@@ -53,9 +54,21 @@ telefono continua a servire la versione vecchia dalla cache e sembrerà che le m
 
 ## Le decisioni che sembrano strane e non lo sono
 
-**Non c'è nessun calendario.** L'app conosce solo il *prossimo* allenamento: A → B → C → A. Che siano
-passati due giorni o tre settimane non cambia niente, e non compare mai un rimprovero. Se ti alleni a
+**Non c'è nessun calendario.** L'app conosce solo la *prossima* scheda: girano in ordine, e che siano
+passati due giorni o tre settimane non cambia niente. Non compare mai un rimprovero. Se ti alleni a
 giorni variabili, un calendario ti farebbe solo sentire in ritardo.
+
+**Le schede sono dati, non codice.** Puoi crearne quante vuoi, cambiarle, riordinarle, eliminarle: la
+rotazione è semplicemente il loro ordine. Puoi anche farne una fuori turno senza spostare il giro, e
+fare un singolo esercizio da solo dal catalogo — quello non fa avanzare la rotazione, perché non è un
+allenamento. Nella prima versione le tre rotazioni erano scritte nel codice, e **27 esercizi su 48 non
+erano raggiungibili in nessun modo**: è il motivo per cui esiste tutta questa parte.
+
+**Tre serie sono il consueto, non un obbligo.** Puoi chiudere prima («Chiudo qui») o farne una in più
+(«Ne faccio un'altra»).
+
+**Durante la sessione puoi cambiare esercizio.** Ti propone le alternative dello stesso gruppo che non
+sono già nella scheda. Vale solo per quel giorno: la scheda resta com'è.
 
 **Si progredisce a ripetizioni, non a peso.** I manubri hanno cinque gradini in tutto — 3, 8,5, 14, 18,5,
 24 kg. Da 14 a 18,5 è un salto del 32%, da 3 a 8,5 del 183%. «Aggiungi un chilo a settimana» qui è
@@ -90,6 +103,9 @@ se ne va con lui e non si recupera. In Impostazioni c'è **Esporta backup**: sca
 ## Cambiare gli esercizi
 
 `esercizi.js` è generato. Per aggiungere o togliere un esercizio si parte dal catalogo illustrato e si
-rigenera, altrimenti le due cose divergono. Le rotazioni A/B/C invece si toccano a mano in
-`allenamenti.js` — `verifica.mjs` controlla che ogni allenamento continui a coprire spinta, tirata,
-gambe e core, e che nessuno punti a un esercizio che non esiste.
+rigenera, altrimenti le due cose divergono.
+
+Le schede si cambiano **dall'app**, non dal codice: `allenamenti.js` è solo la semenza del primo avvio.
+`verifica.mjs` controlla che le schede di partenza coprano spinta, tirata, gambe e core e che nessuna
+punti a un esercizio inesistente; le tue schede invece le fai come vuoi — l'editor ti dice cosa manca
+senza impedirti niente.

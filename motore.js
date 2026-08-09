@@ -73,6 +73,22 @@ export function indiceProgresso(esercizio, peso, ripetizioni, pesoCorporeo){
   return Math.round(c * (1 + ripetizioni / 30) * 10) / 10;
 }
 
+/* Come si scrive un carico, in un posto solo.
+   Stava sparso in tre punti dell'interfaccia, ed è per questo che sulle
+   flessioni compariva «Record: 75 kg × 18»: il peso corporeo veniva trattato
+   come se fosse un manubrio. A corpo libero il carico non si scrive — si
+   scrivono le ripetizioni. */
+export function numero(n){
+  if (n === null || n === undefined) return '–';
+  return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+}
+
+export function etichettaPrestazione(esercizio, peso, ripetizioni){
+  if (esercizio.carico === 'manubri') return numero(peso) + ' kg × ' + ripetizioni;
+  if (esercizio.carico === 'zavorra' && peso > 0) return '+' + numero(peso) + ' kg × ' + ripetizioni;
+  return ripetizioni + ' ripetizioni';
+}
+
 const SFORZI = ['facile', 'giusta', 'limite'];
 export const ETICHETTA_SFORZO = {facile:'Facile', giusta:'Giusta', limite:'Al limite'};
 
@@ -175,8 +191,11 @@ export function prescrizione(esercizio, storico, oggi, pesoCorporeo = PESO_DI_PA
 }
 
 /* Il prossimo allenamento della rotazione. Nessun calendario: conta solo
-   quale è stato l'ultimo, non quando. */
+   quale è stato l'ultimo, non quando.
+   Se l'ultimo è stato cancellato dalle schede, `findIndex` torna -1 e si
+   riparte dalla prima: è il comportamento giusto, non un caso limite. */
 export function prossimoAllenamento(allenamenti, ultimoId){
+  if (!allenamenti.length) return null;
   const i = allenamenti.findIndex(a => a.id === ultimoId);
   return allenamenti[(i + 1) % allenamenti.length];
 }

@@ -111,6 +111,49 @@ controlla('nessun attributo data- con una maiuscola', () => {
   pretendi(storti.length === 0, 'trovati: ' + [...new Set(storti)].join(', '));
 });
 
+/* `height:100%` vale solo se ce l'hanno anche tutti i contenitori sopra:
+   basta un anello mancante e la schermata diventa più alta dello schermo.
+   Col corpo fissato, quello che finisce sotto il bordo non si raggiunge più. */
+controlla('la catena delle altezze non ha anelli mancanti', () => {
+  const css = readFileSync('stile.css', 'utf8');
+  if (!/\.schermata\{[^}]*height:100%/.test(css)) return;   /* non usa le percentuali */
+  for (const sel of ['html,body', '#app'])
+    pretendi(new RegExp(sel.replace('#','#') + '\\{[^}]*height:100%').test(css),
+      sel + ' non ha height:100%, quindi la percentuale sotto non si calcola');
+});
+
+/* Sotto i 16 px, toccando un campo iOS ingrandisce tutta la pagina e non la
+   rimpicciolisce più: l'app sembra rotta e non c'è modo di tornare indietro. */
+controlla('nessun campo di testo sotto i 16 px', () => {
+  const css = readFileSync('stile.css', 'utf8');
+  const piccoli = [];
+  for (const m of css.matchAll(/input[^{]*\{([^}]*)\}/g)){
+    const f = /font-size:\s*([\d.]+)px/.exec(m[1]);
+    if (f && parseFloat(f[1]) < 16) piccoli.push(f[1] + 'px');
+  }
+  pretendi(piccoli.length === 0, 'trovati campi a ' + piccoli.join(', '));
+});
+
+/* Sull'iPhone la barra gesti sta sotto la barra di navigazione: se non si
+   somma il suo spazio, l'ultima riga di ogni elenco resta coperta. */
+controlla('la barra in basso riserva anche lo spazio della barra gesti', () => {
+  const css = readFileSync('stile.css', 'utf8');
+  pretendi(/padding-bottom:calc\(var\(--barra\)\s*\+\s*env\(safe-area-inset-bottom\)\)/.test(css),
+    'la schermata non somma env(safe-area-inset-bottom) alla barra');
+});
+
+/* Il colore dichiarato deve essere quello vero: è quello che iOS usa per la
+   schermata di avvio e per lo sfondo dietro l'app. */
+controlla('il colore dichiarato è quello del fondo', () => {
+  const css = readFileSync('stile.css', 'utf8');
+  const fondo = /--fondo:\s*(#[0-9A-Fa-f]{6})/.exec(css)[1].toLowerCase();
+  const html = readFileSync('index.html', 'utf8');
+  const meta = /name="theme-color" content="(#[0-9A-Fa-f]{6})"/.exec(html)[1].toLowerCase();
+  const man = JSON.parse(readFileSync('manifest.json', 'utf8'));
+  pretendi(meta === fondo, 'index.html dice ' + meta + ' ma il fondo è ' + fondo);
+  pretendi(man.background_color.toLowerCase() === fondo, 'il manifest dice ' + man.background_color);
+});
+
 /* Le figure sono a tratto: se il foglio di stile non dichiara stroke e
    fill:none, l'SVG usa il riempimento nero e diventa una macchia. */
 controlla('il foglio di stile veste le figure a tratto', () => {

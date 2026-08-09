@@ -110,6 +110,36 @@ e l'asse verticale non porta numeri apposta: i valori veri stanno nella tabella 
 **Il peso corporeo è l'unica cosa che l'app ti chiede fuori dalla sessione.** Su trazioni, dip e
 flessioni il carico sei tu: senza quel numero il grafico ti mostrerebbe fermo mentre progredisci.
 
+## Cosa cambia sul telefono, rispetto al computer
+
+Una web app installata sulla schermata home si comporta diversamente da una pagina aperta al computer, e
+qui c'è quello che è stato fatto per tenerne conto.
+
+**Il guscio ha un'altezza fissa.** Il corpo della pagina è fissato e non scorre: a scorrere è solo il
+contenuto dentro la schermata. Serve perché su iPhone la pagina intera rimbalza sotto le dita e la barra
+in basso si stacca. Attenzione: `height:100%` funziona solo se **tutti** i contenitori sopra ce l'hanno —
+basta un anello mancante (`#app`) e la schermata diventa più alta dello schermo, con la parte sotto
+irraggiungibile. `verifica.mjs` lo controlla.
+
+**Lo scorrimento si azzera solo cambiando schermata.** Prima lo azzeravo a ogni ridisegno, e in sessione
+ogni tocco su «+» faceva saltare la pagina in cima.
+
+**Le ripetizioni cambiano due numeri, non tutta la schermata.** Ridisegnare l'intera vista a ogni tocco
+rifà anche l'illustrazione, e si vede scattare.
+
+**La sessione in corso è salvata su disco a ogni ridisegno.** iOS chiude le web app in secondo piano
+senza avvisare: bastava guardare un messaggio durante il recupero per tornare e trovare l'app ripartita
+da capo. Ora la ritrovi in cima a «Oggi», con «Riprendi» e «Butta via».
+
+**Lo schermo non si spegne durante l'allenamento** (Wake Lock). Se il telefono non lo permette — batteria
+bassa, o versione vecchia — non succede niente.
+
+**Nessun campo di testo sotto i 16 px:** sotto quella soglia iOS ingrandisce la pagina appena tocchi
+dentro, e non la rimpicciolisce più.
+
+**La barra in basso somma lo spazio della barra gesti** (`env(safe-area-inset-bottom)`): senza, l'ultima
+riga di ogni elenco resta coperta.
+
 ## Due limiti da conoscere
 
 **Il timer di recupero non suona.** Su iPhone una web app in secondo piano viene congelata dal sistema:

@@ -28,12 +28,20 @@
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+
+/* Il guscio dell'applicazione.
+   Il corpo è fissato e non scorre: a scorrere è solo il contenuto dentro la
+   schermata. Senza questo, su iPhone tutta la pagina rimbalza sotto le dita e
+   la barra in basso si stacca. */
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{
-  margin:0;background:var(--fondo);color:var(--testo);
+  position:fixed;inset:0;margin:0;
+  background:var(--fondo);color:var(--testo);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
-  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
 }
+/* toglie il ritardo del doppio tocco: sul telefono i pulsanti rispondono subito */
+button,.gradino,.salto,.azione{touch-action:manipulation}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
 button:focus-visible,input:focus-visible{outline:2px solid var(--brace);outline-offset:2px}
 h1,h2,h3,p,ul{margin:0}
@@ -55,8 +63,15 @@ ul{list-style:none;padding:0}
    Altezza fissa, non minima: così a scorrere è solo il contenuto, e il
    pulsante grosso resta sempre sotto il pollice invece di finire in fondo
    alla pagina dove bisogna cercarlo. */
-.schermata{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
-.schermata:not(.senza-barra){padding-bottom:var(--barra)}
+/* La catena delle altezze deve essere continua: `height:100%` su .schermata
+   non vale niente se il contenitore sopra è alto quanto il suo contenuto —
+   la schermata diventa più alta dello schermo e, col corpo fissato, quello
+   che finisce sotto il bordo non si raggiunge più. */
+#app{height:100%}
+.schermata{display:flex;flex-direction:column;height:100%;overflow:hidden}
+/* la barra gesti dell'iPhone sta SOTTO la barra di navigazione: se non si
+   somma il suo spazio, l'ultima riga di ogni elenco finisce coperta */
+.schermata:not(.senza-barra){padding-bottom:calc(var(--barra) + env(safe-area-inset-bottom))}
 .contenuto{
   flex:1;min-height:0;                     /* senza questo il figlio non si stringe e non scorre */
   padding:0 var(--s4) var(--s5);
@@ -241,7 +256,7 @@ button.carta{display:block;width:100%}
 .cerca{padding:0 var(--s4) var(--s3)}
 .cerca input{
   width:100%;min-height:46px;background:var(--sup);border:0;border-radius:var(--raggio-p);
-  color:var(--testo);font-size:15px;padding:0 var(--s4);
+  color:var(--testo);font-size:16px;padding:0 var(--s4);   /* mai sotto 16: iOS ingrandirebbe la pagina */
 }
 
 /* ================= grafico ================= */

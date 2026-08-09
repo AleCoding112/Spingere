@@ -20,7 +20,7 @@ let ultimoBackup = null;
 let vista = 'casa', tab = 'casa';
 let dettaglio = null, ritorno = 'esercizi', bozza = null, filtro = '';
 let scelta = [];          /* gruppi spuntati nella schermata di scelta */
-let sess = null, riposo = null, correzione = null;
+let sess = null, riposo = null, correzione = null, inCorso = null;
 
 /* ------------------------------------------------------------------ */
 const scampa = t => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
@@ -30,12 +30,77 @@ const senzaAccenti = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''
 
 function pulisciRiposo(){ if (riposo && riposo.id) clearInterval(riposo.id); riposo = null; }
 
+/* ------------------------------------------------------------------
+   La sessione in corso, salvata su disco.
+
+   iOS chiude le web app in secondo piano senza avvisare: bastava guardare un
+   messaggio durante il recupero per tornare e trovare l'app ripartita da capo,
+   con l'allenamento perso. Ora ogni ridisegno la scrive, e al rientro l'app
+   propone di riprenderla.
+------------------------------------------------------------------ */
+function salvaInCorso(){
+  if (!sess || !sess.lista) return;    /* dopo il riepilogo `sess` è solo un guscio */
+  const c = sess.corrente;
+  archivio.scriviStato('sessioneInCorso', {
+    gruppi: sess.gruppi, nome: sess.nome, data: sess.data, iniziata: sess.iniziata,
+    lista: sess.lista, indice: sess.indice, esercizi: sess.esercizi, vista,
+    corrente: c ? {id: c.id, peso: c.peso, ripetizioni: c.ripetizioni,
+                   serie: c.serie, chiudi: c.chiudi, ancora: c.ancora} : null
+  }).catch(() => {});
+}
+
+function scordaInCorso(){
+  sess = null; inCorso = null;
+  return archivio.scriviStato('sessioneInCorso', null).catch(() => {});
+}
+
+function riprendi(){
+  const s = inCorso;
+  sess = {
+    gruppi: s.gruppi || [], nome: s.nome, data: s.data, iniziata: s.iniziata || Date.now(),
+    lista: s.lista, indice: s.indice, esercizi: s.esercizi || [],
+    corrente: null, cambiaIndice: null
+  };
+  inCorso = null;
+  if (s.corrente && sess.lista[sess.indice]){
+    preparaEsercizio();
+    const c = sess.corrente, v = s.corrente;
+    if (c.id === v.id){
+      c.peso = v.peso; c.ripetizioni = v.ripetizioni;
+      c.serie = v.serie || []; c.chiudi = !!v.chiudi; c.ancora = !!v.ancora;
+    }
+    tieniAcceso();
+    vai('sessione');
+  } else {
+    vai('sessione');           /* era alla domanda «hai ancora tempo?» */
+  }
+}
+
+/* ------------------------------------------------------------------
+   Lo schermo non si spegne durante l'allenamento: fra una serie e l'altra
+   passano due minuti, e riaccenderlo con le mani sudate è una seccatura.
+   Se il telefono non lo permette, non succede niente.
+------------------------------------------------------------------ */
+let veglia = null;
+async function tieniAcceso(){
+  try { if ('wakeLock' in navigator && !veglia) veglia = await navigator.wakeLock.request('screen'); }
+  catch (e){ /* schermo poco carico, o non supportato: pazienza */ }
+}
+function lasciaSpegnere(){
+  if (veglia){ veglia.release().catch(() => {}); veglia = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && sess) tieniAcceso();
+});
+
 async function ricarica(){
   sessioni = await archivio.tutteLeSessioni();
   schede = await sched.leggiSchede();
   preferiti = await archivio.leggiStato('preferiti', []);
   daparte = await archivio.leggiStato('daparte', []);
   ultimoBackup = await archivio.leggiStato('ultimoBackup', null);
+  inCorso = await archivio.leggiStato('sessioneInCorso', null);
+  if (inCorso && (!inCorso.lista || !inCorso.lista.length)) inCorso = null;
   const p = await archivio.leggiStato('pesoCorporeo', null);
   pesoImpostato = p != null;
   pesoCorporeo = pesoImpostato ? p : PESO_DI_PARTENZA;
@@ -61,13 +126,24 @@ const VISTE = {
 };
 const SENZA_BARRA = new Set(['sessione', 'fine', 'anteprima', 'gruppi', 'correzione']);
 
+/* Lo scorrimento si azzera solo cambiando schermata.
+   Prima lo azzeravo a ogni ridisegno: sul telefono, ogni tocco su «+» faceva
+   saltare la pagina in cima. Sul computer non si notava perché ci sta tutto. */
+let ultimaVista = null;
+
 function disegna(){
+  const prima = app.querySelector('.contenuto');
+  const dove = (prima && vista === ultimaVista) ? prima.scrollTop : 0;
+
   const dentro = (VISTE[vista] || vistaCasa)();
   app.innerHTML = '<section class="schermata' + (SENZA_BARRA.has(vista) ? ' senza-barra' : '') + '">' +
     dentro + '</section>' + (SENZA_BARRA.has(vista) ? '' : barraNav());
   collega();
+
   const c = app.querySelector('.contenuto');
-  if (c) c.scrollTop = 0;
+  if (c) c.scrollTop = dove;
+  ultimaVista = vista;
+  if (sess) salvaInCorso();
 }
 function vai(dove, nuovaTab){
   vista = dove;
@@ -126,6 +202,16 @@ function vistaCasa(){
 
   return testata('Oggi', 'Spingere') +
     '<div class="contenuto">' +
+
+      (inCorso
+        ? '<div class="carta"><div class="intestazione-carta">' +
+            '<span class="quanto">Allenamento lasciato a metà</span>' +
+            '<span class="quali">' + scampa(inCorso.nome) + ' · ' + gg(inCorso.data) + ' · ' +
+              (inCorso.esercizi ? inCorso.esercizi.length : 0) + ' esercizi già fatti</span></div>' +
+          '<div class="riga-azioni">' +
+            '<button class="azione pieno" data-riprendi style="flex:1">Riprendi</button>' +
+            '<button class="azione" data-butta>Butta via</button></div></div>'
+        : '') +
 
       '<div class="carta">' +
         '<div class="intestazione-carta">' +
@@ -237,6 +323,7 @@ function iniziaSessione(gruppi, nome, lista){
     lista: lista.slice(), indice: 0, esercizi: [], corrente: null,
     cambiaIndice: null
   };
+  tieniAcceso();
   vai('anteprima');
 }
 
@@ -383,14 +470,18 @@ function vistaAncoraTempo(){
 
 async function concludi(){
   pulisciRiposo();
+  lasciaSpegnere();
   const durata = Math.round((Date.now() - sess.iniziata) / 60000);
   if (sess.esercizi.length){
     await archivio.salvaSessione({
       data: sess.data, nomeScheda: sess.nome, gruppi: sess.gruppi,
       durataMin: durata, esercizi: sess.esercizi
     });
-    await ricarica();
   }
+  const fatte = sess.esercizi, nome = sess.nome;
+  await scordaInCorso();                        /* azzera anche sess */
+  sess = {esercizi: fatte, nome};               /* resta solo per disegnare il riepilogo */
+  await ricarica();
   vai('fine');
 }
 
@@ -467,14 +558,17 @@ function vistaScheda(){
 }
 
 /* ================= ESERCIZI ================= */
-function vistaEsercizi(){
+/* La lista sta in una funzione a parte perché cercando si aggiorna solo lei:
+   ridisegnare tutta la schermata a ogni lettera fa perdere il fuoco al campo,
+   e su iPhone la tastiera si chiude e riapre a ogni tocco. */
+function corpoEsercizi(){
   const q = senzaAccenti(filtro.trim());
   const gruppi = {};
   for (const e of ESERCIZI){
     if (q && !senzaAccenti(e.n + ' ' + e.gruppo).includes(q)) continue;
     (gruppi[e.gruppo] ||= []).push(e);
   }
-  const corpo = Object.keys(gruppi).length
+  return Object.keys(gruppi).length
     ? Object.entries(gruppi).map(([g, lista]) =>
         '<p class="sezione">' + scampa(g) + '</p>' + lista.map(e => {
           const st = archivio.storicoEsercizio(sessioni, e.id);
@@ -491,11 +585,13 @@ function vistaEsercizi(){
             '<span class="freccia">›</span></button>';
         }).join('')).join('')
     : '<p class="vuoto">Nessun esercizio con «' + scampa(filtro) + '».</p>';
+}
 
+function vistaEsercizi(){
   return testata('Esercizi', ESERCIZI.length + ' nel catalogo') +
     '<div class="cerca"><input id="cerca" type="search" placeholder="Cerca" value="' +
-      scampa(filtro) + '" autocomplete="off"></div>' +
-    '<div class="contenuto">' + corpo + '</div>';
+      scampa(filtro) + '" autocomplete="off" enterkeyhint="search"></div>' +
+    '<div class="contenuto"><div id="lista">' + corpoEsercizi() + '</div></div>';
 }
 
 function vistaEsercizio(){
@@ -653,7 +749,7 @@ function collega(){
   const tutti = (s, f) => app.querySelectorAll(s).forEach(f);
   const root = document.body;
   root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
-    sess = null; pulisciRiposo(); filtro = '';
+    sess = null; pulisciRiposo(); lasciaSpegnere(); filtro = '';
     vai(b.dataset.tab, b.dataset.tab);
   });
 
@@ -664,6 +760,15 @@ function collega(){
   });
 
   /* --- casa --- */
+  const rip = q('[data-riprendi]');
+  if (rip) rip.onclick = riprendi;
+  const butta = q('[data-butta]');
+  if (butta) butta.onclick = async () => {
+    if (!confirm('Butto via l\'allenamento lasciato a metà?')) return;
+    await scordaInCorso();
+    disegna();
+  };
+
   const inizia = q('[data-inizia]');
   if (inizia) inizia.onclick = () => {
     const g = laMiaSelezione();
@@ -711,7 +816,10 @@ function collega(){
   const esci = q('[data-esci]');
   if (esci) esci.onclick = () => {
     if (sess.esercizi.length){ if (!confirm('Esci e salvi quello che hai già fatto?')) return; concludi(); }
-    else { if (!confirm('Esci senza salvare niente?')) return; sess = null; pulisciRiposo(); vai('casa','casa'); }
+    else {
+      if (!confirm('Esci senza salvare niente?')) return;
+      pulisciRiposo(); lasciaSpegnere(); scordaInCorso(); vai('casa','casa');
+    }
   };
   tutti('[data-peso]', b => b.onclick = () => {
     const c = sess.corrente;
@@ -719,10 +827,17 @@ function collega(){
                                       : gradinoPrecedente(c.esercizio.carico, c.peso);
     if (n !== null){ c.peso = n; c.pres = {...c.pres, sale:false}; disegna(); }
   });
+  /* Le ripetizioni cambiano due numeri, non tutta la schermata: ridisegnare
+     l'intera vista a ogni tocco rifà anche la figura dell'esercizio, e sul
+     telefono si vede scattare. */
   tutti('[data-rip]', b => b.onclick = () => {
     const c = sess.corrente;
     c.ripetizioni = Math.max(1, c.ripetizioni + Number(b.dataset.rip));
-    disegna();
+    const quanti = app.querySelector('.conta .quanti');
+    const viva = app.querySelector('.serie .casella.viva .n');
+    if (quanti) quanti.textContent = c.ripetizioni;
+    if (viva) viva.textContent = c.ripetizioni;
+    salvaInCorso();
   });
   const serie = q('[data-serie]');
   if (serie) serie.onclick = () => {
@@ -806,10 +921,12 @@ function collega(){
   const cerca = q('#cerca');
   if (cerca) cerca.oninput = () => {
     filtro = cerca.value;
-    const dove = cerca.selectionStart;
-    disegna();
-    const n = app.querySelector('#cerca');
-    if (n){ n.focus(); try { n.setSelectionRange(dove, dove); } catch(e){} }
+    const lista = q('#lista');
+    if (!lista) return;
+    lista.innerHTML = corpoEsercizi();
+    lista.querySelectorAll('[data-apri]').forEach(b => b.onclick = () => {
+      dettaglio = b.dataset.apri; ritorno = 'esercizi'; vai('esercizio');
+    });
   };
   tutti('[data-apri]', b => b.onclick = () => { dettaglio = b.dataset.apri; ritorno = 'esercizi'; vai('esercizio'); });
   const solo = q('[data-solo]');

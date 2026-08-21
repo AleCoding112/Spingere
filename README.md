@@ -86,7 +86,8 @@ serve, si passa alla correzione dei numeri.
 secondo piano, e al ritorno il conto restava fermo dov'era.
 
 **Il recupero cambia col tipo:** 60 secondi sugli isolamenti, 120 sui pesanti e sugli unilaterali, 90 per
-il resto. Novanta per tutto era comodo da scrivere ma sbagliato.
+il resto. Novanta per tutto era comodo da scrivere ma sbagliato. E corre anche fra un esercizio e
+l'altro, non solo fra le serie: finito uno, il timer parte sulla schermata del successivo.
 
 **Dal diario si correggono gli errori.** Un numero digitato male falserebbe la progressione di quell'
 esercizio per sempre: dal diario si riapre una sessione, si sistemano i numeri o si cancella tutta.
@@ -142,12 +143,15 @@ riga di ogni elenco resta coperta.
 
 ## Due limiti da conoscere
 
-**Il timer di recupero non suona.** Su iPhone una web app in secondo piano viene congelata dal sistema:
-a schermo spento non può emettere né suono né notifica. Il timer è un cerchio che scorre a schermo
-acceso. Se ti servono i 90 secondi cronometrati sul serio, usa il timer nativo dell'iPhone in parallelo.
+**Il timer di recupero suona solo con l'app davanti.** A fine recupero fa un bip (se la suoneria è
+accesa), ma su iPhone una web app in secondo piano viene congelata dal sistema: a schermo spento non
+può emettere né suono né notifica. Se ti servono i 90 secondi cronometrati anche a telefono in tasca,
+usa il timer nativo dell'iPhone in parallelo.
 
 **Lo storico sta solo su questo telefono.** Se cancelli l'icona dalla schermata home o resetti l'iPhone,
-se ne va con lui e non si recupera. In Impostazioni c'è **Esporta backup**: scarica un file ogni tanto.
+se ne va con lui e non si recupera. In Impostazioni c'è **Esporta backup**: sull'iPhone apre il foglio
+di condivisione (salvalo su File o mandatelo per messaggio), perché in modalità installata il normale
+scaricamento di un file spesso non fa niente. Fallo ogni tanto.
 
 ---
 

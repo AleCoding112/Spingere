@@ -111,12 +111,25 @@ export async function importa(testo){
   return dati.sessioni.length;
 }
 
-export function scaricaBackup(testo, nomeFile){
+/* Sull'iPhone installata dalla schermata home il collegamento di scaricamento
+   spesso non fa niente: la via che funziona è il foglio di condivisione, che
+   sa salvare su File o mandare dove vuoi. Torna false se l'hai annullato,
+   così la data dell'ultimo backup non viene segnata a vuoto. */
+export async function scaricaBackup(testo, nomeFile){
+  const file = new File([testo], nomeFile, {type: 'application/json'});
+  if (navigator.canShare && navigator.canShare({files: [file]})){
+    try { await navigator.share({files: [file]}); return true; }
+    catch (e){
+      if (e.name === 'AbortError') return false;
+      /* condivisione rotta: si ripiega sul collegamento */
+    }
+  }
   const url = URL.createObjectURL(new Blob([testo], {type:'application/json'}));
   const a = document.createElement('a');
   a.href = url; a.download = nomeFile;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }
 
 /* La data di oggi come '2026-08-08', in ora locale: `toISOString` darebbe

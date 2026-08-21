@@ -67,10 +67,18 @@ function riprendi(){
   vai('sessione');
 }
 
-/* Lo schermo non si spegne durante l'allenamento. */
+/* Lo schermo non si spegne durante l'allenamento.
+   iOS rilascia il blocco quando l'app va in secondo piano: senza azzerare
+   `veglia` al rilascio, al ritorno sembrerebbe ancora attivo e non verrebbe
+   mai richiesto di nuovo — e lo schermo ricomincerebbe a spegnersi. */
 let veglia = null;
 async function tieniAcceso(){
-  try { if ('wakeLock' in navigator && !veglia) veglia = await navigator.wakeLock.request('screen'); }
+  try {
+    if ('wakeLock' in navigator && !veglia){
+      veglia = await navigator.wakeLock.request('screen');
+      veglia.addEventListener('release', () => { veglia = null; });
+    }
+  }
   catch (e){ /* niente da fare: pazienza */ }
 }
 function lasciaSpegnere(){ if (veglia){ veglia.release().catch(() => {}); veglia = null; } }
@@ -464,7 +472,9 @@ function vistaSessione(){
   const mostraSforzo = (c.serie.length >= 3 && !c.ancora) || c.chiudi;
 
   return '<div class="cima"><button data-esci>Esci</button>' +
-      '<span class="passo mono">' + (sess.indice+1) + ' di ' + sess.lista.length + '</span></div>' +
+      '<span class="passo mono">' + (sess.indice+1) + ' di ' + sess.lista.length +
+        ' · <span id="minuti">' + Math.max(0, Math.round((Date.now() - sess.iniziata) / 60000)) +
+        '</span> min</span></div>' +
     '<div class="avanzamento">' + tacche + '</div>' +
     '<div class="contenuto" style="padding-bottom:var(--s4)">' +
       '<div class="figurone">' + fig(e) + '</div>' +
@@ -526,6 +536,33 @@ function pannelloSforzo(){
     '<button class="sotto-grosso" data-ancora>Ne faccio un\'altra</button>';
 }
 
+/* Il bip di fine recupero. In secondo piano iOS non fa suonare niente, ma a
+   schermo acceso si può: il contesto audio però nasce solo dentro un tocco,
+   quindi lo si prepara sui pulsanti della sessione. Con la suoneria spenta
+   resta muto — è un di più, non una promessa. */
+let audio = null;
+function preparaAudio(){
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+  } catch (e){ audio = null; }
+}
+function bip(){
+  if (!audio || audio.state !== 'running' || document.visibilityState !== 'visible') return;
+  try {
+    const t = audio.currentTime;
+    for (const [freq, dopo] of [[880, 0], [880, .18], [1175, .36]]){
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t + dopo);
+      g.gain.exponentialRampToValueAtTime(0.4, t + dopo + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dopo + 0.15);
+      o.connect(g).connect(audio.destination);
+      o.start(t + dopo); o.stop(t + dopo + 0.16);
+    }
+  } catch (e){ /* il bip è un di più */ }
+}
+
 /* Il recupero si legge dall'orologio, non contando all'indietro: iOS congela
    i timer quando l'app va in secondo piano, e al ritorno il conto era fermo
    a dove l'avevi lasciato. */
@@ -539,7 +576,7 @@ function riquadroRiposo(){
       '<circle class="quota" cx="25" cy="25" r="' + r + '" stroke-dasharray="' + giro.toFixed(1) +
       '" stroke-dashoffset="' + (giro - giro * (resta / riposo.totale)).toFixed(1) + '"/></svg>' +
     '<div><div class="tempo mono" id="tempo">' + resta + 's</div>' +
-      '<div class="avviso">Non suona: a schermo spento iOS ferma l\'app.</div></div>' +
+      '<div class="avviso">Alla fine fa un bip — ma solo con l\'app davanti.</div></div>' +
     '<button class="salta" data-salta-riposo>Salta</button></div>';
 }
 function avviaRiposo(secondi){
@@ -547,10 +584,13 @@ function avviaRiposo(secondi){
   riposo = {fine: Date.now() + secondi * 1000, totale: secondi, id: null};
   riposo.id = setInterval(() => {
     const resta = restaRiposo();
-    if (resta <= 0){ pulisciRiposo(); disegna(); return; }
+    if (resta <= 0){ pulisciRiposo(); bip(); disegna(); return; }
     const t = document.getElementById('tempo'), q = document.querySelector('.recupero .quota');
     if (!t){ pulisciRiposo(); return; }
     t.textContent = resta + 's';
+    const min = document.getElementById('minuti');
+    if (min && sess && sess.iniziata)
+      min.textContent = Math.max(0, Math.round((Date.now() - sess.iniziata) / 60000));
     if (q){
       const giro = 2 * Math.PI * 21;
       q.setAttribute('stroke-dashoffset', (giro - giro * (resta / riposo.totale)).toFixed(1));
@@ -558,10 +598,17 @@ function avviaRiposo(secondi){
   }, 500);
 }
 
-function avanti(){
+/* `pausaDopo`: il recupero da far correre sull'esercizio successivo. Prima il
+   timer partiva solo fra le serie, e fra un esercizio e l'altro si ripartiva
+   a freddo o si perdeva tempo a occhio. */
+function avanti(pausaDopo){
   pulisciRiposo();
   sess.indice++;
-  if (sess.indice < sess.lista.length){ preparaEsercizio(); disegna(); return; }
+  if (sess.indice < sess.lista.length){
+    preparaEsercizio();
+    if (pausaDopo) avviaRiposo(pausaDopo);
+    disegna(); return;
+  }
   sess.corrente = null;
   disegna();
 }
@@ -760,19 +807,26 @@ function collega(){
   const q = s => app.querySelector(s);
   const tutti = (s, f) => app.querySelectorAll(s).forEach(f);
 
+  /* Abbandonare una sessione mai iniziata (indietro dall'anteprima) deve anche
+     cancellarla dal disco: `disegna` l'aveva già salvata, e alla prossima
+     apertura compariva un «allenamento lasciato a metà» fantasma. */
+  const abbandona = () => {
+    if (sess && sess.lista) scordaInCorso(); else sess = null;
+    pulisciRiposo(); lasciaSpegnere();
+  };
   tutti('[data-tab]', b => b.onclick = () => {
-    sess = null; pulisciRiposo(); lasciaSpegnere(); filtro = '';
+    abbandona(); filtro = '';
     vai(b.dataset.tab, b.dataset.tab);
   });
   tutti('[data-va]', b => b.onclick = () => {
     const d = b.dataset.va;
-    if (d === 'casa'){ sess = null; pulisciRiposo(); lasciaSpegnere(); }
+    if (d === 'casa') abbandona();
     vai(d, ['casa','schede','esercizi','impostazioni'].includes(d) ? d : tab);
   });
 
   /* --- casa --- */
   const rip = q('[data-riprendi]');
-  if (rip) rip.onclick = riprendi;
+  if (rip) rip.onclick = () => { preparaAudio(); riprendi(); };
   const butta = q('[data-butta]');
   if (butta) butta.onclick = async () => {
     if (!confirm('Butto via l\'allenamento lasciato a metà?')) return;
@@ -862,7 +916,7 @@ function collega(){
   const annulla = q('[data-annulla-cambio]');
   if (annulla) annulla.onclick = () => { sess.cambiaIndice = null; disegna(); };
   const parti = q('[data-parti]');
-  if (parti) parti.onclick = () => { sess.indice = 0; preparaEsercizio(); vai('sessione'); };
+  if (parti) parti.onclick = () => { preparaAudio(); sess.indice = 0; preparaEsercizio(); vai('sessione'); };
 
   const esci = q('[data-esci]');
   if (esci) esci.onclick = () => {
@@ -886,6 +940,7 @@ function collega(){
   });
   const serie = q('[data-serie]');
   if (serie) serie.onclick = () => {
+    preparaAudio();
     const c = sess.corrente;
     c.serie.push(c.ripetizioni); c.chiudi = false; c.ancora = false;
     if (c.serie.length < 3) avviaRiposo(recupero(c.esercizio)); else pulisciRiposo();
@@ -895,6 +950,7 @@ function collega(){
   if (chiudi) chiudi.onclick = () => { sess.corrente.chiudi = true; pulisciRiposo(); disegna(); };
   const ancora = q('[data-ancora]');
   if (ancora) ancora.onclick = () => {
+    preparaAudio();
     sess.corrente.ancora = true; sess.corrente.chiudi = false;
     avviaRiposo(recupero(sess.corrente.esercizio)); disegna();
   };
@@ -902,12 +958,24 @@ function collega(){
     const c = sess.corrente;
     if (c.serie.length)
       sess.esercizi.push({id: c.id, peso: c.peso, serie: c.serie.slice(), sforzo: b.dataset.sforzo});
-    avanti();
+    avanti(recupero(c.esercizio));
   });
+  /* Saltare o cambiare esercizio butta via le serie già registrate lì: se ce
+     ne sono, prima si chiede. Un tocco sbagliato non deve costare lavoro. */
   const salta = q('[data-salta]');
-  if (salta) salta.onclick = () => { sess.corrente.serie = []; avanti(); };
+  if (salta) salta.onclick = () => {
+    const c = sess.corrente;
+    if (c.serie.length &&
+        !confirm('Hai già registrato ' + plur(c.serie.length, 'serie', 'serie') + ': le butto via?')) return;
+    c.serie = []; avanti();
+  };
   const sost = q('[data-sostituisci]');
-  if (sost) sost.onclick = () => { sess.cambiaIndice = sess.indice; disegna(); };
+  if (sost) sost.onclick = () => {
+    const c = sess.corrente;
+    if (c.serie.length &&
+        !confirm('Cambiando esercizio perdi le serie già fatte qui. Continuo?')) return;
+    sess.cambiaIndice = sess.indice; disegna();
+  };
   const saltaR = q('[data-salta-riposo]');
   if (saltaR) saltaR.onclick = () => { pulisciRiposo(); disegna(); };
 
@@ -961,7 +1029,9 @@ function collega(){
   };
   const esporta = q('[data-esporta]');
   if (esporta) esporta.onclick = async () => {
-    archivio.scaricaBackup(await archivio.esporta(), 'spingere-' + archivio.oggi() + '.json');
+    const uscito = await archivio.scaricaBackup(await archivio.esporta(),
+                                               'spingere-' + archivio.oggi() + '.json');
+    if (!uscito) return;   /* annullato: il backup non è uscito davvero */
     ultimoBackup = archivio.oggi();
     await archivio.scriviStato('ultimoBackup', ultimoBackup);
     disegna();
